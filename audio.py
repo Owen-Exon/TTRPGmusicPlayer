@@ -6,6 +6,30 @@ import tkinter as tk
 import time
 from functools import partial
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import soundfile as sf
+import matplotlib.pyplot as plt
+
+def getAudioFileCanvas(path,x, text=''):
+    print(text)
+    """1. Prints information about an audio singal, 2. plots the waveform, and 3. Creates player
+    
+    Notebook: C1/B_PythonAudio.ipynb
+    
+    Args: 
+        x: Input signal
+        Fs: Sampling rate of x    
+        text: Text to print
+    """
+    
+    fig,ax = plt.subplots(figsize=(5,0.8))
+    ax.set_title(text,loc='left',fontdict={"size":8})
+    ax.plot(x, color='gray')
+    ax.set_xlim(0,x.shape[0])
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    ax.set_xlabel(text)
+    fig.tight_layout()
+    return fig
 
 def clearTerminal():
     os.system("cls")
@@ -77,7 +101,14 @@ def on_mousewheel(event):
 
 
 def playTune(prefix):
+    global canvasWidgets
     global currentPrefix
+    
+    for canvasWidget in canvasWidgets:
+        canvasWidget.destroy()
+    
+    canvasWidgets = []
+    
     if currentPrefix != None:
         for strand in tunes[currentPrefix]:
             strand["player"].stop()
@@ -90,8 +121,22 @@ def playTune(prefix):
         strand["player"].play(loop=True)
         volumeSliderList[i]['state'] = 'normal'
         volumeSliderList[i].config(bg="#f0f0f0")
+        canvas = FigureCanvasTkAgg(getAudioFileCanvas(strand["player"].fullfilename,strand["waveform"],strand["name"]), master=master)
+        canvas.draw()
+        canvasWidget = canvas.get_tk_widget()
+        canvasWidgets.append(canvasWidget)
+        canvasWidget.grid(row=4+i,column=0,columnspan=20,pady=2)
     
     currentPrefix = prefix
+
+def onClosing():
+    for prefix in tunes:
+        for strand in tunes[prefix]:
+            strand["player"].stop()
+    
+    master.destroy()
+    master.quit()
+    os._exit(0)
 
 absolutePath = "D:\\tmp"
 
@@ -109,10 +154,10 @@ currentPrefix = None
 for prefix in prefixes:
     theseFiles = [file for file in audioFiles if prefix in file]
     commonStr = findCommonLeftStr(*theseFiles)
-    
-    tunes.update({prefix:[{"player":AudioPlayer(file),"name":file.replace(commonStr,"")[:-4]} for file in theseFiles]})
+    tunes.update({prefix:[{"player":AudioPlayer(file),"waveform":sf.read(file,dtype='int16')[0][::1000],"name":file.replace(commonStr,"")[:-4]} for file in theseFiles]})
 
 master = tk.Tk()
+master.protocol("WM_DELETE_WINDOW", onClosing)
 
 setVolume = tk.Button(master,text="Temp")
 setVolume.grid(row=0,column=0,sticky="EW")
@@ -145,7 +190,8 @@ for i in range(10):
     # tempLabel = tk.Label(master,font=("Helvetica",8),textvariable=tempStrVar,wraplength=1,anchor="n")
     # tempLabel.grid(row=0,column=2*i+2,padx=2,rowspan=3,sticky="ns")
 
-
+global canvasWidgets
+canvasWidgets = []
 
 for prefix in prefixes:
     tempButton = tk.Button(master,text=prefix,command=partial(playTune,prefix))
