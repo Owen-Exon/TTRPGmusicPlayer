@@ -2,9 +2,7 @@
 
 import glob
 from audioplayer import AudioPlayer
-import math
 import os
-import subprocess
 import tkinter as tk
 from tkinter import ttk
 import time
@@ -41,6 +39,10 @@ volumeSliderList = []
 global canvasWidgets
 canvasWidgets = []
 
+global canvasImgs
+canvasImgs = []
+
+
 #endregion define global var
 
 #region general Funcs
@@ -57,6 +59,19 @@ def sign(a):
         return 0
     else:
         return a/abs(a)
+
+def saveAudioFileFigure(x,savePath, text=''):
+    fig,ax = plt.subplots(figsize=(5,0.8))
+    ax.set_title(text,loc='left',fontdict={"size":8})
+    ax.plot(x, color='gray',linewidth=0.2)
+    ax.set_xlim(0,x.shape[0])
+    ax.set_ylim(-7500,7500)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    ax.set_xlabel(text)
+    fig.tight_layout()
+    fig.savefig(savePath,bbox_inches='tight')
+    plt.close(fig)
 
 def onMousewheel(event):
     scale = event.widget
@@ -130,18 +145,6 @@ def silencePlaying(prefix = None):
 
 #region startStop Funcs
 
-def getAudioFileFigure(x, text=''):
-    fig,ax = plt.subplots(figsize=(5,0.8))
-    ax.set_title(text,loc='left',fontdict={"size":8})
-    ax.plot(x, color='gray',linewidth=0.2)
-    ax.set_xlim(0,x.shape[0])
-    ax.set_ylim(-7500,7500)
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-    ax.set_xlabel(text)
-    fig.tight_layout()
-    return fig
-
 def playTune(prefix):
     global currentPrefix
     if currentPrefix != None:
@@ -155,18 +158,17 @@ def playTune(prefix):
         tempVar = tk.IntVar(master,100)
         volumeDataList.append(tempVar)
         processVolume(currentPrefix,i,100)
-        tempScale = tk.Scale(master,length=80,from_=100,to=0,orient='vertical',variable=tempVar,command=partial(processVolume,currentPrefix,i),showvalue=0)
+        tempScale = tk.Scale(master,length=70,from_=100,to=0,orient='vertical',variable=tempVar,command=partial(processVolume,currentPrefix,i),showvalue=0)
         volumeSliderList.append(tempScale)
         tempScale.bind("<Enter>", lambda e: e.widget.focus_set())
         tempScale.bind("<MouseWheel>", onMousewheel)
         tempScale.grid(row=4+i,column=0,padx=2)
-        fig = getAudioFileFigure(strand["waveform"],strand["name"])
-        canvas = FigureCanvasTkAgg(fig, master=master)
         
-        canvas.draw()
-        canvasWidget = canvas.get_tk_widget()
+        img = tk.PhotoImage(file=strand["waveformPath"])
+        canvasImgs.append(img)
+        canvasWidget = tk.Label(master,image=img)
         canvasWidgets.append(canvasWidget)
-        canvasWidget.grid(row=4+i,column=1)
+        canvasWidget.grid(row=4+i,column=1,sticky="NSEW")
         
         strand["onVolumeFade"] = 100
         maserVolumeData.set(100)
@@ -184,6 +186,7 @@ def startPlayers(prefix):
 def stopPlaying(prefix=None): 
     if prefix == None: prefix = currentPrefix       
     global canvasWidgets
+    global canvasImgs
     global volumeDataList
     global volumeSliderList
     
@@ -195,6 +198,7 @@ def stopPlaying(prefix=None):
     for volumeSlider in volumeSliderList:
         volumeSlider.destroy()
     
+    canvasImgs = []
     canvasWidgets = []
     volumeDataList = []
     volumeSliderList = []
@@ -211,29 +215,36 @@ def stopPlayers(prefix):
 
 #region setupAudio
 
+global absolutePath
 absolutePath = "D:\\tmp"
 
 audioFiles = [file for file in glob.glob(absolutePath + '/**', recursive=True) if (file[-4:] in [".wav",".mp3"] and "DefaultMix" not in file)]
 prefixes = set()
 for file in audioFiles:
     prefixes.add("\\".join(file.split("\\")[2:3]))
+
 prefixes = sorted(list(prefixes))
 
 for prefix in prefixes:
     theseFiles = [file for file in audioFiles if prefix in file]
     commonStr = findCommonLeftStr(*theseFiles)
     info = sf.info(theseFiles[0])
-
     tunes.update({prefix:{
         "files":[
-        {
-            "player":AudioPlayer(file),
-            "waveform":sf.read(file,dtype='int16')[0][::500],
-            "name":file.replace(commonStr,"")[:-4],
-            "toFadeVolume":100
-        } for file in theseFiles],
+            {
+                "player":AudioPlayer(file),
+                "name":file.replace(commonStr,"")[:-4],
+                "toFadeVolume":100
+            } for file in theseFiles
+        ],
         "duration":info.frames/info.samplerate
     }})
+    
+    for file,strand in zip(theseFiles,tunes[prefix]["files"]):
+        cachePath = f'.\\cachedWaveforms\\{file.replace(absolutePath+"\\","").replace("\\","____")[:-4]}.png'
+        strand.update({"waveformPath":cachePath})
+        if not os.path.exists(cachePath):
+            saveAudioFileFigure(sf.read(file,dtype='int16')[0][::500],cachePath,strand["name"])
 
 #endregion setupAudio
 
@@ -250,7 +261,7 @@ masterVolume.bind("<Enter>", lambda e: e.widget.focus_set())
 masterVolume.bind("<MouseWheel>", onMousewheel)
 
 progressBar = ttk.Progressbar(master,maximum=1000,orient='horizontal',mode='determinate')
-progressBar.grid(row=3,column=1,columnspan=20,padx=12,sticky="ew")
+progressBar.grid(row=3,column=1,columnspan=20,padx=10,sticky="ew")
 progressBar['value'] = 0
 
 setVolume = tk.Button(master,text="Fade",command=onVolumeFade)
