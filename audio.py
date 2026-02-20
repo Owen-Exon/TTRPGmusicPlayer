@@ -1,7 +1,6 @@
 #region imports
 
 import glob
-from audioplayer import AudioPlayer
 import os
 import tkinter as tk
 from tkinter import ttk
@@ -9,6 +8,7 @@ import time
 from functools import partial
 import soundfile as sf
 import matplotlib.pyplot as plt
+from just_playback import Playback
 
 #endregion imports
 
@@ -87,7 +87,7 @@ def tickTime():
     global currentPrefix
     global startTime
     if currentPrefix != None and startTime != None:
-        timeProp = ((time.time()-startTime) / tunes[currentPrefix]["duration"])
+        timeProp = (tunes[currentPrefix]["files"][0]["player"].curr_pos % tunes[currentPrefix]["files"][0]["player"].duration) / tunes[currentPrefix]["files"][0]["player"].duration
         progressBar["value"] = 1000 * timeProp
         
         if timeProp > 1:
@@ -99,8 +99,7 @@ def onClosing():
     for prefix in tunes:
         for strand in tunes[prefix]["files"]:
             strand["player"].stop()
-            strand["player"].close()
-    
+
     master.destroy()
     master.quit()
     os._exit(0)
@@ -110,7 +109,7 @@ def onClosing():
 #region volume Funcs
 
 def processVolume(prefix,trackIndex,volume):
-    tunes[prefix]["files"][trackIndex]["toFadeVolume"] = int(volume)
+    tunes[prefix]["files"][trackIndex]["toFadeVolume"] = int(volume) / 100
 
 def onVolumeFade(prefix=None):
     global fadeID
@@ -128,11 +127,11 @@ def fadeVolumeLoop(prefix,initialVolumes,targetVolumes,totalTime,currentTime):
         global fadeID
         if currentTime < totalTime:
             for strand,oldVolume,desiredVolume in zip(tunes[prefix]["files"],initialVolumes,targetVolumes):
-                strand["player"].volume = (currentTime/totalTime) * (desiredVolume-oldVolume) + oldVolume
+                strand["player"].set_volume((currentTime/totalTime) * (desiredVolume-oldVolume) + oldVolume)
             fadeID = master.after(50,partial(fadeVolumeLoop,prefix,initialVolumes,targetVolumes,totalTime,currentTime+50))
         else:
             for strand,volume in zip(tunes[prefix]["files"],targetVolumes):
-                strand["player"].volume = volume
+                strand["player"].set_volume(volume)
             fadeID = None
 
 def silencePlaying(prefix = None):
@@ -235,14 +234,13 @@ for prefix in prefixes:
     tunes.update({prefix:{
         "files":[
             {
-                "player":AudioPlayer(file),
+                "player":Playback(file),
                 "name":file.replace(commonStr,"")[:-4],
-                "toFadeVolume":100
+                "toFadeVolume":1
             } for file in theseFiles
         ],
-        "duration":info.frames/info.samplerate
     }})
-    
+
     for file,strand in zip(theseFiles,tunes[prefix]["files"]):
         cachePath = f'.\\cachedWaveforms\\{file.replace(absolutePath+"\\","").replace("\\","____")[:-4]}.png'
         strand.update({"waveformPath":cachePath})
