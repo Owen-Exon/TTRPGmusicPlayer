@@ -7,7 +7,6 @@ import tkinter as tk
 from tkinter import ttk
 import time
 from functools import partial
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import soundfile as sf
 import matplotlib.pyplot as plt
 
@@ -154,6 +153,8 @@ def playTune(prefix):
     
     currentPrefix = prefix
     
+    titleLabelData.set(currentPrefix)
+    
     for strand,i in zip(tunes[currentPrefix]["files"],range(len(tunes[currentPrefix]["files"]))):
         tempVar = tk.IntVar(master,100)
         volumeDataList.append(tempVar)
@@ -168,7 +169,7 @@ def playTune(prefix):
         canvasImgs.append(img)
         canvasWidget = tk.Label(master,image=img)
         canvasWidgets.append(canvasWidget)
-        canvasWidget.grid(row=4+i,column=1,sticky="NSEW")
+        canvasWidget.grid(row=4+i,column=1,columnspan=20,sticky="NSEW")
         
         strand["onVolumeFade"] = 100
         maserVolumeData.set(100)
@@ -202,6 +203,8 @@ def stopPlaying(prefix=None):
     canvasWidgets = []
     volumeDataList = []
     volumeSliderList = []
+    
+    titleLabelData.set("None")
     
     master.after(2000,partial(stopPlayers,prefix))     
 
@@ -270,6 +273,10 @@ fadeToSilence = tk.Button(master,text="Silence",command=silencePlaying)
 fadeToSilence.grid(row=1,column=1,padx=2,sticky="EW")
 tempButton = tk.Button(master,text="Stop",command=stopPlaying)
 tempButton.grid(row=2,column=1,padx=2,sticky="EW")
+
+titleLabelData = tk.StringVar(master,"None") 
+titleLabel = tk.Label(master,textvariable=titleLabelData,font="Helvetica 12 bold")
+titleLabel.grid(row=2,column=2,columnspan=20,sticky="W")
 
 for prefix in prefixes:
     tempButton = tk.Button(master,text=prefix,command=partial(playTune,prefix))
