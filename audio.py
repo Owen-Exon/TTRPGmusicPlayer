@@ -178,8 +178,12 @@ def playTune(prefix):
 def startPlayers(prefix):
     global startTime
     startTime = time.time()
-    for strand in tunes[prefix]["files"]: # Seperated to ensure audio matches up
+    for strand in tunes[prefix]["files"]:
         strand["player"].play()
+        strand["player"].set_volume(0)
+    
+    for strand in tunes[prefix]["files"]:
+        strand["player"].seek(0.1) # seeking to 0 seems to create reload???
     
     onVolumeFade(prefix)
 
