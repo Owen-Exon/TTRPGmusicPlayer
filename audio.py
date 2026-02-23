@@ -14,33 +14,15 @@ from just_playback import Playback
 
 #region define global var 
 
-global currentPrefix
 currentPrefix = None
-
-global isPlaying
 isPlaying = False
-
-global startTime
 startTime = None
-
-global fadeID
 fadeID = None
-
-global tunes
 tunes = {}
-
-global volumeDataList
 volumeDataList = []
-
-global volumeSliderList
 volumeSliderList = []
-
-global canvasWidgets
 canvasWidgets = []
-
-global canvasImgs
 canvasImgs = []
-
 
 #endregion define global var
 
@@ -84,8 +66,7 @@ def onMousewheel(event):
     scale.set(scale.get() + direction * resolution * 5)
 
 def tickTime():
-    global currentPrefix
-    global startTime
+    global currentPrefix, startTime
     if currentPrefix != None and startTime != None:
         timeProp = (tunes[currentPrefix]["files"][0]["player"].curr_pos % tunes[currentPrefix]["files"][0]["player"].duration) / tunes[currentPrefix]["files"][0]["player"].duration
         progressBar["value"] = 1000 * timeProp
@@ -189,10 +170,7 @@ def startPlayers(prefix):
 
 def stopPlaying(prefix=None): 
     if prefix == None: prefix = currentPrefix       
-    global canvasWidgets
-    global canvasImgs
-    global volumeDataList
-    global volumeSliderList
+    global canvasWidgets, canvasImgs, volumeDataList, volumeSliderList
     
     silencePlaying(prefix)
     
@@ -221,7 +199,6 @@ def stopPlayers(prefix):
 
 #region setupAudio
 
-global absolutePath
 absolutePath = "D:\\tmp"
 
 audioFiles = [file for file in glob.glob(absolutePath + '/**', recursive=True) if (file[-4:] in [".wav",".mp3"] and "DefaultMix" not in file)]
