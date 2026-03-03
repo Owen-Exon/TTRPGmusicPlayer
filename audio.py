@@ -141,7 +141,6 @@ def playTune(prefix):
         processVolume(currentPrefix,i,100)
         tempScale = tk.Scale(master,length=70,from_=100,to=0,orient='vertical',variable=tempVar,command=partial(processVolume,currentPrefix,i),showvalue=0)
         volumeSliderList.append(tempScale)
-        tempScale.bind("<Enter>", lambda e: e.widget.focus_set())
         tempScale.bind("<MouseWheel>", onMousewheel)
         tempScale.grid(row=4+i,column=0,padx=2)
         
@@ -239,7 +238,6 @@ maserVolumeData = tk.IntVar(master,value=100)
 masterVolume = tk.Scale(master,length=80,from_=100,to=0,orient='vertical',variable=maserVolumeData,showvalue=0)
 masterVolume.grid(row=0,column=0,rowspan=3)
 
-masterVolume.bind("<Enter>", lambda e: e.widget.focus_set())
 masterVolume.bind("<MouseWheel>", onMousewheel)
 
 progressBar = ttk.Progressbar(master,maximum=1000,orient='horizontal',mode='determinate')
